@@ -1,0 +1,759 @@
+{
+	"info": {
+		"_postman_id": "8a7f1234-5678-4321-9876-banking-fiber3",
+		"name": "Banking Application Microservices (Fiber v3 + MySQL)",
+		"description": "Production-grade Banking Microservices API collection with RBAC, Level 2 Resource Authorization, ACID row-locked Transfers, Double-Entry Ledger, Idempotency, and Audit logging.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "aliceToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "bobToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "adminToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "tellerToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "aliceRefreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "accountA_ID",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "accountB_ID",
+			"value": "2",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "0. Gateway Health",
+			"item": [
+				{
+					"name": "Gateway Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["health"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "1. Authentication & RBAC",
+			"item": [
+				{
+					"name": "1.1 Login - Alice (Customer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('aliceToken', json.data.access_token);",
+									"    pm.collectionVariables.set('aliceRefreshToken', json.data.refresh_token);",
+									"    console.log('Alice Access Token saved to collection variable');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"alice@bank.com\",\n    \"password\": \"Alice@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "1.2 Login - Bob (Customer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('bobToken', json.data.access_token);",
+									"    console.log('Bob Access Token saved to collection variable');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"bob@bank.com\",\n    \"password\": \"Bob@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "1.3 Login - Admin (Super Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('adminToken', json.data.access_token);",
+									"    console.log('Admin Access Token saved to collection variable');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@bank.com\",\n    \"password\": \"Admin@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "1.4 Login - Teller (Branch Staff)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('tellerToken', json.data.access_token);",
+									"    console.log('Teller Access Token saved to collection variable');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"teller@bank.com\",\n    \"password\": \"Teller@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "1.5 Register New User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"charlie@bank.com\",\n    \"password\": \"Charlie@123\",\n    \"full_name\": \"Charlie Kumar\",\n    \"role\": \"CUSTOMER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "1.6 Get Current User Profile (/me)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "me"]
+						}
+					}
+				},
+				{
+					"name": "1.7 Refresh Access Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh_token\": \"{{aliceRefreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "refresh"]
+						}
+					}
+				},
+				{
+					"name": "1.8 List Users (Admin Only - Requires user:manage)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "users"]
+						}
+					}
+				},
+				{
+					"name": "1.9 List Users (Customer - Expect 403 Forbidden)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "users"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Customer Management",
+			"item": [
+				{
+					"name": "2.1 Create Customer Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"Alice\",\n    \"last_name\": \"Sharma\",\n    \"phone_number\": \"+91-9876543210\",\n    \"address\": \"123 MG Road, Bangalore\",\n    \"national_id\": \"ABCDE1234F\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/customers",
+							"host": ["{{baseUrl}}"],
+							"path": ["customers"]
+						}
+					}
+				},
+				{
+					"name": "2.2 Get Alice Profile (Level 2 Auth - Allowed)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/customers/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["customers", "1"]
+						}
+					}
+				},
+				{
+					"name": "2.3 Alice Views Bob Profile (Level 2 Auth - Expect 403 Forbidden)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/customers/2",
+							"host": ["{{baseUrl}}"],
+							"path": ["customers", "2"]
+						}
+					}
+				},
+				{
+					"name": "2.4 List Customers (Staff Only - Requires customer:view)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/customers?limit=10&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["customers"],
+							"query": [
+								{"key": "limit", "value": "10"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "2.5 Update KYC Status (Admin Only - Requires customer:update)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"kyc_status\": \"VERIFIED\",\n    \"reason\": \"Documents verified successfully\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/customers/1/kyc",
+							"host": ["{{baseUrl}}"],
+							"path": ["customers", "1", "kyc"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Bank Accounts",
+			"item": [
+				{
+					"name": "3.1 Create Account (Staff Only - Requires account:create)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customer_id\": 1,\n    \"user_id\": 3,\n    \"branch_code\": \"MAIN01\",\n    \"account_type\": \"SAVINGS\",\n    \"currency\": \"INR\",\n    \"initial_deposit\": 50000.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/accounts",
+							"host": ["{{baseUrl}}"],
+							"path": ["accounts"]
+						}
+					}
+				},
+				{
+					"name": "3.2 List My Accounts (Alice)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/accounts",
+							"host": ["{{baseUrl}}"],
+							"path": ["accounts"]
+						}
+					}
+				},
+				{
+					"name": "3.3 Get Alice Account by ID (Level 2 Auth - Allowed)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/accounts/{{accountA_ID}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["accounts", "{{accountA_ID}}"]
+						}
+					}
+				},
+				{
+					"name": "3.4 Alice Views Bob Account (Level 2 Auth - Expect 403 Forbidden)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/accounts/{{accountB_ID}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["accounts", "{{accountB_ID}}"]
+						}
+					}
+				},
+				{
+					"name": "3.5 Block Account (Staff - Requires account:block)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/accounts/{{accountB_ID}}/block",
+							"host": ["{{baseUrl}}"],
+							"path": ["accounts", "{{accountB_ID}}", "block"]
+						}
+					}
+				},
+				{
+					"name": "3.6 Unblock Account (Staff - Requires account:unblock)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/accounts/{{accountB_ID}}/unblock",
+							"host": ["{{baseUrl}}"],
+							"path": ["accounts", "{{accountB_ID}}", "unblock"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Transactions & Double-Entry Ledger",
+			"item": [
+				{
+					"name": "4.1 Money Transfer with Idempotency Key (Alice -> Bob ₹10,000)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate dynamic idempotency key",
+									"var uuid = 'idemp-' + Math.random().toString(36).substring(2, 15) + '-' + Date.now();",
+									"pm.environment.set('dynamicIdempKey', uuid);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"},
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Idempotency-Key", "value": "{{dynamicIdempKey}}"},
+							{"key": "X-Request-ID", "value": "req-trace-transfer-101"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_account_id\": 1,\n    \"to_account_id\": 2,\n    \"amount\": 10000.00,\n    \"currency\": \"INR\",\n    \"description\": \"Payment for consulting services\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/transfer",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "transfer"]
+						}
+					}
+				},
+				{
+					"name": "4.2 Idempotency Replay (Same Key - Verifies No Double Debit)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"},
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Idempotency-Key", "value": "{{dynamicIdempKey}}"},
+							{"key": "X-Request-ID", "value": "req-trace-transfer-replay"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_account_id\": 1,\n    \"to_account_id\": 2,\n    \"amount\": 10000.00,\n    \"currency\": \"INR\",\n    \"description\": \"Payment for consulting services\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/transfer",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "transfer"]
+						}
+					}
+				},
+				{
+					"name": "4.3 Transfer Insufficient Funds (Expect 400 Bad Request)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_account_id\": 1,\n    \"to_account_id\": 2,\n    \"amount\": 1000000.00,\n    \"currency\": \"INR\",\n    \"description\": \"Overdraft transfer\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/transfer",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "transfer"]
+						}
+					}
+				},
+				{
+					"name": "4.4 Cash Deposit (Teller / Customer)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"account_id\": 1,\n    \"amount\": 5000.00,\n    \"currency\": \"INR\",\n    \"description\": \"Branch cash deposit\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/deposit",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "deposit"]
+						}
+					}
+				},
+				{
+					"name": "4.5 Cash Withdrawal (Alice)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"account_id\": 1,\n    \"amount\": 2000.00,\n    \"currency\": \"INR\",\n    \"description\": \"ATM cash withdrawal\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/withdraw",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "withdraw"]
+						}
+					}
+				},
+				{
+					"name": "4.6 List Transactions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions?account_id=1&limit=20&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions"],
+							"query": [
+								{"key": "account_id", "value": "1"},
+								{"key": "limit", "value": "20"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "4.7 Inspect Double-Entry Ledger (Admin/Auditor - Requires ledger:view)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/ledger?limit=50&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "ledger"],
+							"query": [
+								{"key": "limit", "value": "50"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "5. Audit Trail",
+			"item": [
+				{
+					"name": "5.1 View Immutable Audit Logs (Admin Only - Requires audit:view)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/audit/logs?limit=50&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["audit", "logs"],
+							"query": [
+								{"key": "limit", "value": "50"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "5.2 Filter Audit Logs by Resource (TRANSACTION)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{adminToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/audit/logs?resource_type=TRANSACTION&limit=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["audit", "logs"],
+							"query": [
+								{"key": "resource_type", "value": "TRANSACTION"},
+								{"key": "limit", "value": "20"}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "6. Notifications (gRPC & REST)",
+			"item": [
+				{
+					"name": "6.1 Send Email Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"alice@bank.com\",\n  \"subject\": \"Welcome to Banking!\",\n  \"body\": \"Your account has been setup successfully.\",\n  \"html_body\": \"<h3>Your account has been setup successfully.</h3>\",\n  \"metadata\": {\n    \"category\": \"ONBOARDING\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/email",
+							"host": ["{{baseUrl}}"],
+							"path": ["notifications", "email"]
+						}
+					}
+				},
+				{
+					"name": "6.2 Send SMS Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone_number\": \"+919876543210\",\n  \"message\": \"Your debit alert: Rs 1000.00 transferred successfully. Balance: Rs 49000.00\",\n  \"metadata\": {\n    \"type\": \"TRANSACTION_ALERT\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/sms",
+							"host": ["{{baseUrl}}"],
+							"path": ["notifications", "sms"]
+						}
+					}
+				},
+				{
+					"name": "6.3 Send In-App / Push Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": 4,\n  \"recipient\": \"alice-app-client\",\n  \"title\": \"Security Notice\",\n  \"content\": \"Your password was changed from Chrome Windows.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/send",
+							"host": ["{{baseUrl}}"],
+							"path": ["notifications", "send"]
+						}
+					}
+				},
+				{
+					"name": "6.4 List Notifications for Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notifications?limit=20&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["notifications"],
+							"query": [
+								{"key": "limit", "value": "20"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "6.5 Get Notification Delivery Status by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{aliceToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notifications/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["notifications", "1"]
+						}
+					}
+				}
+			]
+		}
+	]
+}

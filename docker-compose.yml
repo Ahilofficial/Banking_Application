@@ -1,0 +1,149 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: banking_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: banking
+      MYSQL_USER: banking_user
+      MYSQL_PASSWORD: banking_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: banking_redis
+    ports:
+      - "6379:6379"
+
+  audit-service:
+    build:
+      context: .
+      args:
+        SERVICE_PATH: ./services/audit-service/cmd/main.go
+    container_name: banking_audit_service
+    environment:
+      PORT: 8005
+      DB_DRIVER: mysql
+      DB_DSN: "banking_user:banking_pass@tcp(mysql:3306)/banking?charset=utf8mb4&parseTime=True&loc=Local"
+      JWT_SECRET: super-secret-banking-jwt-key-2026-production-grade
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8005:8005"
+
+  auth-service:
+    build:
+      context: .
+      args:
+        SERVICE_PATH: ./services/auth-service/cmd/main.go
+    container_name: banking_auth_service
+    environment:
+      PORT: 8001
+      DB_DRIVER: mysql
+      DB_DSN: "banking_user:banking_pass@tcp(mysql:3306)/banking?charset=utf8mb4&parseTime=True&loc=Local"
+      JWT_SECRET: super-secret-banking-jwt-key-2026-production-grade
+      AUDIT_SERVICE_URL: http://audit-service:8005
+    depends_on:
+      mysql:
+        condition: service_healthy
+      audit-service:
+        condition: service_started
+    ports:
+      - "8001:8001"
+
+  customer-service:
+    build:
+      context: .
+      args:
+        SERVICE_PATH: ./services/customer-service/cmd/main.go
+    container_name: banking_customer_service
+    environment:
+      PORT: 8002
+      DB_DRIVER: mysql
+      DB_DSN: "banking_user:banking_pass@tcp(mysql:3306)/banking?charset=utf8mb4&parseTime=True&loc=Local"
+      JWT_SECRET: super-secret-banking-jwt-key-2026-production-grade
+      AUDIT_SERVICE_URL: http://audit-service:8005
+    depends_on:
+      mysql:
+        condition: service_healthy
+      audit-service:
+        condition: service_started
+    ports:
+      - "8002:8002"
+
+  account-service:
+    build:
+      context: .
+      args:
+        SERVICE_PATH: ./services/account-service/cmd/main.go
+    container_name: banking_account_service
+    environment:
+      PORT: 8003
+      DB_DRIVER: mysql
+      DB_DSN: "banking_user:banking_pass@tcp(mysql:3306)/banking?charset=utf8mb4&parseTime=True&loc=Local"
+      JWT_SECRET: super-secret-banking-jwt-key-2026-production-grade
+      AUDIT_SERVICE_URL: http://audit-service:8005
+    depends_on:
+      mysql:
+        condition: service_healthy
+      audit-service:
+        condition: service_started
+    ports:
+      - "8003:8003"
+
+  transaction-service:
+    build:
+      context: .
+      args:
+        SERVICE_PATH: ./services/transaction-service/cmd/main.go
+    container_name: banking_transaction_service
+    environment:
+      PORT: 8004
+      DB_DRIVER: mysql
+      DB_DSN: "banking_user:banking_pass@tcp(mysql:3306)/banking?charset=utf8mb4&parseTime=True&loc=Local"
+      JWT_SECRET: super-secret-banking-jwt-key-2026-production-grade
+      AUDIT_SERVICE_URL: http://audit-service:8005
+    depends_on:
+      mysql:
+        condition: service_healthy
+      audit-service:
+        condition: service_started
+    ports:
+      - "8004:8004"
+
+  api-gateway:
+    build:
+      context: .
+      args:
+        SERVICE_PATH: ./services/gateway/main.go
+    container_name: banking_api_gateway
+    environment:
+      PORT: 8000
+      JWT_SECRET: super-secret-banking-jwt-key-2026-production-grade
+      AUTH_SERVICE_URL: http://auth-service:8001
+      CUSTOMER_SERVICE_URL: http://customer-service:8002
+      ACCOUNT_SERVICE_URL: http://account-service:8003
+      TRANSACTION_SERVICE_URL: http://transaction-service:8004
+      AUDIT_SERVICE_URL: http://audit-service:8005
+    depends_on:
+      - auth-service
+      - customer-service
+      - account-service
+      - transaction-service
+      - audit-service
+    ports:
+      - "8000:8000"
+
+volumes:
+  mysql_data:

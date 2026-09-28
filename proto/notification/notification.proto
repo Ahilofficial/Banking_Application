@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "banking-microservices/pkg/proto/notification";
+
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  EMAIL = 1;
+  SMS = 2;
+  PUSH = 3;
+  IN_APP = 4;
+}
+
+enum NotificationStatus {
+  NOTIFICATION_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  SENT = 2;
+  DELIVERED = 3;
+  FAILED = 4;
+}
+
+message SendEmailRequest {
+  uint32 user_id = 1;
+  string to = 2;
+  string subject = 3;
+  string body = 4;
+  string html_body = 5;
+  map<string, string> metadata = 6;
+}
+
+message SendEmailResponse {
+  string notification_id = 1;
+  NotificationStatus status = 2;
+  string message = 3;
+  string sent_at = 4;
+}
+
+message SendSMSRequest {
+  uint32 user_id = 1;
+  string phone_number = 2;
+  string message = 3;
+  map<string, string> metadata = 4;
+}
+
+message SendSMSResponse {
+  string notification_id = 1;
+  NotificationStatus status = 2;
+  string message = 3;
+  string sent_at = 4;
+}
+
+message SendNotificationRequest {
+  uint32 user_id = 1;
+  NotificationType type = 2;
+  string recipient = 3;
+  string title = 4;
+  string content = 5;
+  map<string, string> metadata = 6;
+}
+
+message SendNotificationResponse {
+  string notification_id = 1;
+  NotificationStatus status = 2;
+  string message = 3;
+  string sent_at = 4;
+}
+
+message GetNotificationsRequest {
+  uint32 user_id = 1;
+  NotificationType type = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message NotificationItem {
+  string id = 1;
+  uint32 user_id = 2;
+  NotificationType type = 3;
+  string recipient = 4;
+  string title = 5;
+  string content = 6;
+  NotificationStatus status = 7;
+  string created_at = 8;
+}
+
+message GetNotificationsResponse {
+  repeated NotificationItem notifications = 1;
+  int32 total = 2;
+}
+
+message GetNotificationStatusRequest {
+  string notification_id = 1;
+}
+
+message NotificationStatusResponse {
+  string notification_id = 1;
+  NotificationStatus status = 2;
+  string error_message = 3;
+  string updated_at = 4;
+}
+
+service NotificationService {
+  rpc SendEmail(SendEmailRequest) returns (SendEmailResponse);
+  rpc SendSMS(SendSMSRequest) returns (SendSMSResponse);
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  rpc GetNotifications(GetNotificationsRequest) returns (GetNotificationsResponse);
+  rpc GetNotificationStatus(GetNotificationStatusRequest) returns (NotificationStatusResponse);
+}
